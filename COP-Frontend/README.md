@@ -2,6 +2,41 @@
 
 App móvil **COP – Citas Oficiales Polígono**. Toda la interfaz y la lógica están en el módulo **`shared`** y se comparten entre Android e iOS. Para comunicarse con el backend usa **Ktor Client**.
 
+## 0. Qué cambió en esta versión (noviembre 2026)
+
+La arquitectura es la misma (`composeApp` → `ui` → `domain` → `data`) y **la huella sigue igual** (`AccesoBiometricoAndroid.kt` + checkbox "Recordar para entrar con huella"). Se agregó:
+
+| Función | Requisito | Dónde |
+|---|---|---|
+| Crear cuenta con aviso de privacidad | RN-01, RC-05 | `CuentaScreens.kt`, `RegistroViewModel`, `RegistrarUsuarioUseCase` |
+| Recuperar contraseña con código | RN-02 | `RecuperarScreen`, `RecuperarViewModel` |
+| Sesión guardada (no pide contraseña cada vez) y cierre por inactividad | RN-02, RNN-08 | `data/local/AlmacenLocal.kt`, `NavegacionViewModel` |
+| Agendar en 5 pasos | RN-03, 04, 05, RC-06 | `AgendarScreen`, `AgendarViewModel`, `AgendarCitaUseCase` |
+| Cancelar y reprogramar dentro del plazo | RN-08, 09, RNN-04 | `PanelUsuarioScreen`, `ReprogramarScreen` |
+| Recordatorio 24 h antes y avisos del Centro | RN-10, 11, RNN-07 | `data/local/Avisos.kt`, `plataforma/Workers.kt`, `NotificacionesScreen` |
+| Agregar cita al calendario | RI-04 | `PanelUsuarioScreen` |
+| Consulta sin internet | RNN-06 | `AlmacenLocal`, `PanelViewModel` |
+| Confirmar, rechazar, modificar, cancelar, atendida/inasistencia | RN-12, 16, 18 | `AccionesAgenda.kt`, `PanelPersonalScreen`, `PanelProfesionalScreen` |
+| Agenda con filtros, cita presencial | RN-13, 15 | `PanelPersonalScreen`, `AgendarScreen` (modo manual) |
+| Servicios, profesionales y horarios | RN-14, 17, RNN-05 | `AdminScreens.kt`, `AdminViewModels.kt` |
+| Exportar agenda PDF / Excel, reportes de fallas | RI-07, RS-07 | `AdminScreens.kt`, `AyudaScreen` |
+| **Sensor GPS**: polígonos de Tulancingo en el mapa | — | `PoligonosScreen`, `composeApp/sensores/`, `domain/ubicacion/` |
+
+### Sensor GPS (geolocalizador)
+
+| Etapa | Qué hace | Archivo |
+|---|---|---|
+| Habilitación | Permisos `ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION` y revisa que el GPS esté encendido | `AndroidManifest.xml`, `SensorUbicacion.android.kt` |
+| Calibración | Descarta lecturas con precisión peor a 100 m | `domain/ubicacion/FiltroUbicacion.kt` |
+| Obtención | `LocationManager` (GPS y red) cada 3 s o 2 m: latitud, longitud y precisión | `SensorUbicacion.android.kt` |
+| Procesamiento | Promedia las 3 últimas lecturas y calcula la distancia (Haversine) a cada polígono | `FiltroUbicacion.kt`, `PoligonosCercanosUseCase.kt` |
+
+El mapa es **OpenStreetMap (osmdroid)**: libre y sin clave. Muestra el **Polígono Guadalupe** en rojo, los demás polígonos en azul y a la persona como punto azul; los ordena del más cercano al más lejano y tiene **Cómo llegar** y **Llamar**. Los polígonos vienen de `GET /poligonos` (y hay una copia en `data/local/PoligonosRespaldo.kt` para cuando no hay internet). La ubicación nunca se manda al servidor.
+
+Pruebas del GPS: `shared/src/commonTest/.../UbicacionTest.kt`.
+
+**Servidor en internet:** cambia la URL en `UrlServidor.android.kt` por la de Render o Railway. El tiempo de espera de `ApiClient.kt` subió a 60 s porque Render gratis tarda en "despertar".
+
 ---
 
 ## 1. Cómo correrlo
@@ -179,10 +214,10 @@ Los repositorios regresan `Result.success(dato)` o `Result.failure(error)`. El V
 
 | Rol | Pantalla | Contenido |
 |---|---|---|
-| ADMINISTRADOR | `PanelAdministradorScreen` | Resumen (servicios activos, profesionales, citas), lista de profesionales y catálogo de servicios |
-| PERSONAL | `PanelPersonalScreen` | Solicitudes por confirmar y agenda completa del Centro |
-| PROFESIONAL | `PanelProfesionalScreen` | **Solo sus** citas, con el nombre del paciente |
-| USUARIO | `PanelUsuarioScreen` | Sus próximas citas, historial y servicios del Centro |
+| ADMINISTRADOR | `PanelAdministradorScreen` | Resumen, agenda del Centro, servicios y profesionales, horarios, cita presencial, exportar, reportes de fallas, mapa |
+| PERSONAL | `PanelPersonalScreen` | Solicitudes por confirmar (confirmar/rechazar), agenda con filtros (modificar, cancelar, atendida), cita presencial, horarios, exportar, mapa |
+| PROFESIONAL | `PanelProfesionalScreen` | **Solo sus** citas, con el paciente; marca atendida o no asistió |
+| USUARIO | `PanelUsuarioScreen` | Agendar, próximas citas (cancelar, reprogramar, calendario), historial, avisos, mapa de polígonos, ayuda |
 
 Quién ve qué citas se decide en `domain/usecase/ObtenerCitasUseCase.kt` (confidencialidad, COP-RC-04).
 
@@ -193,7 +228,9 @@ Quién ve qué citas se decide en `domain/usecase/ObtenerCitasUseCase.kt` (confi
 1. **¿Dónde se configura Ktor Client?** En `data/remote/ApiClient.kt`. Las dependencias están en `shared/build.gradle.kts` y `gradle/libs.versions.toml`.
 2. **¿Dónde se conecta el serializador en el frontend?** En `ApiClient.kt`, con `install(ContentNegotiation) { json() }`. Además, el plugin `kotlinSerialization` en `shared/build.gradle.kts` y las clases `@Serializable` en `data/dto`.
 3. **¿Dónde se enruta por rol?** En `composeApp/navegacion/Pantalla.kt`, en la función `segunRol()`.
-4. **¿Qué hay en `androidMain` y qué hay en `commonMain`?** `commonMain` tiene todo lo compartido. `androidMain` solo tiene lo exclusivo de Android: la URL `10.0.2.2` y el motor OkHttp.
+4. **¿Qué hay en `androidMain` y qué hay en `commonMain`?** `commonMain` tiene todo lo compartido. `androidMain` solo tiene lo exclusivo de Android: la URL, el motor OkHttp, el sensor GPS y el mapa (`composeApp/sensores`), y almacenamiento, notificaciones y recordatorios (`plataforma/`).
+8. **¿Cómo funciona el sensor GPS?** Ver la tabla de la sección 0: habilitación (permiso), calibración (descarta lecturas imprecisas), obtención (`LocationManager`) y procesamiento (promedio y distancia a cada polígono).
+9. **¿Dónde se guarda la sesión?** En `data/local/AlmacenLocal.kt` (SharedPreferences en Android). La huella guarda sus credenciales aparte en `AccesoBiometricoAndroid`.
 5. **¿Por qué `10.0.2.2`?** Es la IP con la que el emulador de Android ve el `localhost` de la PC.
 6. **¿Para qué sirve el ViewModel?** Guarda el estado de la pantalla, sobrevive a la rotación y hace las llamadas en `viewModelScope`.
 7. **¿Qué es un DTO?** Una clase que representa exactamente el JSON que viaja por la red.

@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,9 +40,12 @@ import com.poligono.cop.domain.model.Usuario
  * Hacerlas una sola vez = mismo estilo en toda la app (COP-RC-10).
  */
 
-/** Barra superior de cada panel: iniciales, nombre, rol y botón para salir. */
+/**
+ * Barra superior de cada panel: iniciales, nombre, rol y botón para salir.
+ * Si [onRegresar] no es null, en lugar de "Salir" se muestra "Regresar".
+ */
 @Composable
-fun EncabezadoPanel(usuario: Usuario, onCerrarSesion: () -> Unit) {
+fun EncabezadoPanel(usuario: Usuario, onCerrarSesion: () -> Unit, onRegresar: (() -> Unit)? = null) {
     Surface(color = MaterialTheme.colorScheme.primary) {
         Row(
             modifier = Modifier
@@ -78,8 +82,14 @@ fun EncabezadoPanel(usuario: Usuario, onCerrarSesion: () -> Unit) {
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
-            TextButton(onClick = onCerrarSesion) {
-                Text("Salir", color = MaterialTheme.colorScheme.onPrimary)
+            if (onRegresar != null) {
+                TextButton(onClick = onRegresar) {
+                    Text("Regresar", color = MaterialTheme.colorScheme.onPrimary)
+                }
+            } else {
+                TextButton(onClick = onCerrarSesion) {
+                    Text("Salir", color = MaterialTheme.colorScheme.onPrimary)
+                }
             }
         }
     }
@@ -145,7 +155,8 @@ fun FilaResumen(vararg datos: Pair<Int, String>) {
 fun TarjetaCita(
     cita: Cita,
     mostrarPaciente: Boolean,
-    mostrarProfesional: Boolean
+    mostrarProfesional: Boolean,
+    acciones: @Composable ColumnScope.() -> Unit = {}
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -175,12 +186,28 @@ fun TarjetaCita(
                 )
             }
             if (mostrarPaciente) {
+                val telefono = if (cita.pacienteTelefono.isNotBlank()) " · ${cita.pacienteTelefono}" else ""
                 Text(
-                    text = "Paciente: ${cita.paciente}",
+                    text = "Paciente: ${cita.paciente}$telefono",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            if (cita.notas.isNotBlank()) {
+                Text(
+                    text = "Comentario: ${cita.notas}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (cita.motivo.isNotBlank()) {
+                Text(
+                    text = cita.motivo,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            acciones()
         }
     }
 }
@@ -192,7 +219,9 @@ fun EtiquetaEstado(estado: EstadoCita) {
         EstadoCita.PENDIENTE -> Color(0xFFFFF1C2) to Color(0xFF6B4E00)
         EstadoCita.CONFIRMADA -> Color(0xFFD6F2DD) to Color(0xFF1B5E2B)
         EstadoCita.CANCELADA -> Color(0xFFFADBD8) to Color(0xFF8C1D18)
+        EstadoCita.RECHAZADA -> Color(0xFFFADBD8) to Color(0xFF8C1D18)
         EstadoCita.ATENDIDA -> Color(0xFFE1E6EC) to Color(0xFF3A4A5C)
+        EstadoCita.INASISTENCIA -> Color(0xFFFFE0CC) to Color(0xFF7A3300)
     }
     Text(
         text = estado.etiqueta,

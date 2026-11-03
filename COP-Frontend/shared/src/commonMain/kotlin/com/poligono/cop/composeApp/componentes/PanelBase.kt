@@ -29,6 +29,8 @@ import com.poligono.cop.ui.PanelUiState
  *
  * El parámetro "contenido" es una función: cada pantalla de rol
  * manda SUS secciones y aquí se colocan dentro de la lista.
+ * Con [onRegresar] el encabezado muestra "Regresar" en vez de "Salir"
+ * (por ejemplo, la agenda abierta desde el panel del administrador).
  */
 @Composable
 fun PanelBase(
@@ -36,10 +38,11 @@ fun PanelBase(
     estado: PanelUiState,
     onActualizar: () -> Unit,
     onCerrarSesion: () -> Unit,
+    onRegresar: (() -> Unit)? = null,
     contenido: LazyListScope.() -> Unit
 ) {
     Scaffold(
-        topBar = { EncabezadoPanel(usuario, onCerrarSesion) },
+        topBar = { EncabezadoPanel(usuario, onCerrarSesion, onRegresar) },
         containerColor = MaterialTheme.colorScheme.background
     ) { espacioInterno ->
         when {
@@ -69,6 +72,16 @@ fun PanelBase(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // COP-RNN-06: aviso de que se muestran datos guardados (sin internet)
+                estado.sinConexion?.let { texto ->
+                    item { Aviso(texto, esError = true) }
+                }
+
+                // Resultado de la última acción (cancelar, confirmar...)
+                estado.mensaje?.let { texto ->
+                    item { Aviso(texto) }
+                }
+
                 contenido()
 
                 item {

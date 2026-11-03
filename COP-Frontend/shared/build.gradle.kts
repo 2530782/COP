@@ -50,6 +50,13 @@ kotlin {
             implementation(libs.compose.uiTooling)
             // Motor HTTP de Ktor para Android
             implementation(libs.ktor.client.okhttp)
+            // Permisos (GPS, notificaciones) y botón "atrás"
+            implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.core.ktx)
+            // Mapa libre de OpenStreetMap (no requiere clave ni cuenta de pago)
+            implementation(libs.osmdroid.android)
+            // Recordatorios programados y revisión de avisos en segundo plano
+            implementation(libs.androidx.work.runtime)
         }
         // Código que solo se compila para iOS
         iosMain.dependencies {

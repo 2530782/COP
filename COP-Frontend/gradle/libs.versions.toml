@@ -16,6 +16,9 @@ kotlin = "2.4.20"
 material3 = "1.12.0-alpha03"
 # Ktor Client: la misma versión que usa el backend (COP-Backend)
 ktor = "3.3.1"
+# Mapa libre de OpenStreetMap y tareas en segundo plano
+osmdroid = "6.1.20"
+work = "2.10.1"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -36,6 +39,10 @@ compose-material3 = { module = "org.jetbrains.compose.material3:material3", vers
 compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMultiplatform" }
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
 compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
+
+# --- Sensor GPS (mapa) y recordatorios ---
+osmdroid-android = { module = "org.osmdroid:osmdroid-android", version.ref = "osmdroid" }
+androidx-work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
 
 # --- Ktor Client (red) ---
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }

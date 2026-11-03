@@ -2,15 +2,20 @@ package com.poligono.cop.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.poligono.cop.data.local.Avisos
+import com.poligono.cop.data.repository.SinConexion
 import com.poligono.cop.di.Dependencias
 import com.poligono.cop.domain.model.Cita
+import com.poligono.cop.domain.model.EstadoCita
 import com.poligono.cop.domain.model.Profesional
 import com.poligono.cop.domain.model.Rol
 import com.poligono.cop.domain.model.Servicio
 import com.poligono.cop.domain.model.Usuario
+import com.poligono.cop.domain.repository.CopRepository
 import com.poligono.cop.domain.usecase.ObtenerCitasUseCase
 import com.poligono.cop.domain.usecase.ObtenerProfesionalesUseCase
 import com.poligono.cop.domain.usecase.ObtenerServiciosUseCase
+import com.poligono.cop.domain.util.FechasApp
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,31 +28,36 @@ data class PanelUiState(
     val error: String? = null,
     val citas: List<Cita> = emptyList(),
     val servicios: List<Servicio> = emptyList(),
-    val profesionales: List<Profesional> = emptyList()
+    val profesionales: List<Profesional> = emptyList(),
+    /** COP-RNN-06: si no hay internet, aviso y citas guardadas en el teléfono. */
+    val sinConexion: String? = null,
+    /** Mensaje después de una acción (ej. "La cita se canceló"). */
+    val mensaje: String? = null,
+    val procesando: Boolean = false
 )
 
 /**
  * ViewModel que usan las 4 vistas de rol.
- * Carga los datos del backend según el rol del usuario que inició sesión.
+ * Carga los datos del backend según el rol del usuario que inició sesión
+ * y ejecuta las acciones sobre las citas (cancelar, confirmar, atendida...).
  */
 class PanelViewModel(
     private val usuario: Usuario,
     private val obtenerCitas: ObtenerCitasUseCase = Dependencias.obtenerCitas,
     private val obtenerServicios: ObtenerServiciosUseCase = Dependencias.obtenerServicios,
-    private val obtenerProfesionales: ObtenerProfesionalesUseCase = Dependencias.obtenerProfesionales
+    private val obtenerProfesionales: ObtenerProfesionalesUseCase = Dependencias.obtenerProfesionales,
+    private val repository: CopRepository = Dependencias.repository
 ) : ViewModel() {
 
     private val _estado = MutableStateFlow(PanelUiState())
     val estado: StateFlow<PanelUiState> = _estado.asStateFlow()
 
-    // init se ejecuta al crear el ViewModel: cargamos los datos de una vez
-    init {
-        cargar()
-    }
+    // La pantalla llama a cargar() cada vez que aparece (LaunchedEffect), así al regresar
+    // de agendar o reprogramar se ve la información actualizada.
 
     fun cargar() {
         viewModelScope.launch {
-            _estado.update { it.copy(cargando = true, error = null) }
+            _estado.update { it.copy(cargando = it.citas.isEmpty(), error = null) }
 
             // 1) Citas: el caso de uso decide cuáles le tocan a este rol
             val citas = obtenerCitas(usuario)
@@ -57,19 +67,81 @@ class PanelViewModel(
             val servicios: Result<List<Servicio>> = if (necesitaCatalogo) obtenerServicios() else Result.success(emptyList())
             val profesionales: Result<List<Profesional>> = if (necesitaCatalogo) obtenerProfesionales() else Result.success(emptyList())
 
+            val errorCitas = citas.exceptionOrNull()
+
+            // COP-RNN-06: sin internet, el paciente ve las citas que se guardaron la última vez
+            if (errorCitas is SinConexion && usuario.rol == Rol.USUARIO) {
+                val guardadas = repository.citasGuardadas()
+
+                if (guardadas != null) {
+                    _estado.update {
+                        it.copy(
+                            cargando = false,
+                            error = null,
+                            citas = guardadas.first,
+                            sinConexion = "Sin conexión a internet. Se muestran tus citas guardadas el " +
+                                "${FechasApp.momento(guardadas.second)}. Para agendar o cambiar necesitas internet."
+                        )
+                    }
+                    return@launch
+                }
+            }
+
             // Si cualquiera falló, mostramos el primer error
             val error = listOf(citas, servicios, profesionales)
                 .firstNotNullOfOrNull { it.exceptionOrNull() }
+
+            val lista = citas.getOrDefault(emptyList())
+
+            if (usuario.rol == Rol.USUARIO && citas.isSuccess) {
+                Avisos.sincronizarRecordatorios(lista)
+            }
 
             _estado.update {
                 it.copy(
                     cargando = false,
                     error = error?.message,
-                    citas = citas.getOrDefault(emptyList()),
+                    citas = lista,
                     servicios = servicios.getOrDefault(emptyList()),
-                    profesionales = profesionales.getOrDefault(emptyList())
+                    profesionales = profesionales.getOrDefault(emptyList()),
+                    sinConexion = null
                 )
             }
+        }
+    }
+
+    /** COP-RN-08: el paciente cancela su cita. */
+    fun cancelar(cita: Cita) {
+        ejecutar("La cita se canceló.") { repository.cancelarCita(cita.id) }
+    }
+
+    /** COP-RN-12, 16 y 18: confirmar, rechazar, cancelar, atendida o inasistencia. */
+    fun cambiarEstado(cita: Cita, estado: EstadoCita, motivo: String) {
+        ejecutar("Cita marcada como ${estado.etiqueta.lowercase()}.") {
+            repository.cambiarEstadoCita(cita.id, estado.name, motivo.trim())
+        }
+    }
+
+    fun limpiarMensaje() {
+        _estado.update { it.copy(mensaje = null) }
+    }
+
+    fun mostrarMensaje(texto: String) {
+        _estado.update { it.copy(mensaje = texto) }
+    }
+
+    private fun ejecutar(textoExito: String, accion: suspend () -> Result<Cita>) {
+        viewModelScope.launch {
+            _estado.update { it.copy(procesando = true, mensaje = null) }
+
+            accion()
+                .onSuccess {
+                    _estado.update { it.copy(procesando = false, mensaje = textoExito) }
+                    cargar()
+                }
+                .onFailure { error ->
+                    _estado.update { it.copy(procesando = false, mensaje = error.message) }
+                }
         }
     }
 }
