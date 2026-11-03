@@ -20,13 +20,14 @@ FROM azul/zulu-openjdk:21-jre
 
 WORKDIR /app
 
-# Copia el servidor ya compilado (los JSON de resources/data van dentro del .jar)
+# Copia el servidor ya compilado (los JSON de resources/data van dentro del .jar
+# y se copian a la base de datos la primera vez que arranca)
 COPY --from=build /app/build/install/COP-Backend /app
 
 # Limita la memoria de la JVM para que quepa en el plan gratuito (0.5 GB)
 ENV JAVA_OPTS="-Xmx300m"
 
-# Application.kt escucha en 0.0.0.0:8080
+# Application.kt escucha en 0.0.0.0:8080 o en el puerto de la variable PORT (Render/Railway)
 EXPOSE 8080
 
 CMD ["/app/bin/COP-Backend"]

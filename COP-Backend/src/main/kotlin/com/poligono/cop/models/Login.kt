@@ -14,17 +14,28 @@ data class LoginRequest(
     val password: String
 )
 
-/** JSON que se responde en POST /login. */
+/**
+ * JSON que se responde en POST /login.
+ * token: se manda en las siguientes peticiones como "Authorization: Bearer <token>".
+ */
 @Serializable
 data class LoginResponse(
     val exito: Boolean,
     val mensaje: String,
-    val usuario: UsuarioDto? = null
+    val usuario: UsuarioDto? = null,
+    val token: String? = null
 )
 
 /** Respuesta genérica de error (mismo formato que LoginResponse, sin usuario). */
 @Serializable
 data class RespuestaError(
     val exito: Boolean,
+    val mensaje: String
+)
+
+/** Respuesta genérica de éxito sin datos. */
+@Serializable
+data class RespuestaOk(
+    val exito: Boolean = true,
     val mensaje: String
 )

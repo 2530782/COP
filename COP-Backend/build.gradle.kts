@@ -21,6 +21,11 @@ dependencies {
     implementation(libs.ktor.server.callLogging)         // bitácora de peticiones (COP-RS-06)
     implementation(libs.ktor.server.statusPages)         // respuestas de error ordenadas
     implementation(libs.logback.classic)                 // imprime los logs en consola
+    implementation(libs.ktor.server.auth)                // sesión con token (COP-RC-04)
+    implementation(libs.ktor.server.authJwt)             // token JWT con el rol del usuario
+    implementation(libs.h2)                              // base de datos local (archivo datos/cop.mv.db)
+    implementation(libs.postgresql)                      // base de datos en Render
+    implementation(libs.openpdf)                         // exportar agenda en PDF (COP-RI-07)
 
     testImplementation(libs.ktor.server.testHost)
     testImplementation(libs.kotlin.testJunit)
