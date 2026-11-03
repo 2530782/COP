@@ -1,0 +1,12 @@
+[
+  { "id": 1,  "servicioId": "FIS", "profesional": "fisio", "paciente": "ana",   "fecha": "2026-10-01", "hora": "10:00", "estado": "ATENDIDA" },
+  { "id": 2,  "servicioId": "PSI", "profesional": "psico", "paciente": "sofia", "fecha": "2026-10-02", "hora": "15:00", "estado": "ATENDIDA" },
+  { "id": 3,  "servicioId": "PSI", "profesional": "psico", "paciente": "luis",  "fecha": "2026-10-05", "hora": "17:00", "estado": "CANCELADA" },
+  { "id": 4,  "servicioId": "FIS", "profesional": "fisio", "paciente": "luis",  "fecha": "2026-10-09", "hora": "11:00", "estado": "CONFIRMADA" },
+  { "id": 5,  "servicioId": "FIS", "profesional": "fisio", "paciente": "sofia", "fecha": "2026-10-09", "hora": "12:00", "estado": "PENDIENTE" },
+  { "id": 6,  "servicioId": "NUT", "profesional": "nutri", "paciente": "ana",   "fecha": "2026-10-12", "hora": "09:00", "estado": "CONFIRMADA" },
+  { "id": 7,  "servicioId": "NUT", "profesional": "nutri", "paciente": "sofia", "fecha": "2026-10-13", "hora": "10:00", "estado": "PENDIENTE" },
+  { "id": 8,  "servicioId": "PSI", "profesional": "psico", "paciente": "ana",   "fecha": "2026-10-15", "hora": "16:00", "estado": "PENDIENTE" },
+  { "id": 9,  "servicioId": "FIS", "profesional": "fisio", "paciente": "ana",   "fecha": "2026-10-16", "hora": "10:00", "estado": "PENDIENTE" },
+  { "id": 10, "servicioId": "NUT", "profesional": "nutri", "paciente": "luis",  "fecha": "2026-10-20", "hora": "12:00", "estado": "CONFIRMADA" }
+]

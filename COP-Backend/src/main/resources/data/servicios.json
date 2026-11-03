@@ -1,0 +1,30 @@
+[
+  {
+    "id": "FIS",
+    "nombre": "Fisioterapia",
+    "descripcion": "Rehabilitación de lesiones, dolor muscular y recuperación de movilidad.",
+    "duracionMinutos": 50,
+    "activo": true
+  },
+  {
+    "id": "NUT",
+    "nombre": "Nutrición",
+    "descripcion": "Orientación alimentaria y planes de alimentación según tus necesidades.",
+    "duracionMinutos": 40,
+    "activo": true
+  },
+  {
+    "id": "PSI",
+    "nombre": "Psicología",
+    "descripcion": "Atención psicológica individual y acompañamiento emocional.",
+    "duracionMinutos": 50,
+    "activo": true
+  },
+  {
+    "id": "TLE",
+    "nombre": "Terapia de lenguaje",
+    "descripcion": "Apoyo en problemas de habla y comunicación. Próximamente.",
+    "duracionMinutos": 45,
+    "activo": false
+  }
+]

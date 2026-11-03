@@ -1,0 +1,60 @@
+[
+  {
+    "username": "admin",
+    "password": "1234",
+    "nombre": "Laura Hernández",
+    "rol": "ADMINISTRADOR"
+  },
+  {
+    "username": "personal",
+    "password": "personal123",
+    "nombre": "Martha Ramírez",
+    "rol": "PERSONAL"
+  },
+  {
+    "username": "fisio",
+    "password": "fisio123",
+    "nombre": "Lic. Carlos Ortiz",
+    "rol": "PROFESIONAL",
+    "servicioId": "FIS"
+  },
+  {
+    "username": "nutri",
+    "password": "nutri123",
+    "nombre": "Lic. Diana Flores",
+    "rol": "PROFESIONAL",
+    "servicioId": "NUT"
+  },
+  {
+    "username": "psico",
+    "password": "psico123",
+    "nombre": "Psic. Jorge Medina",
+    "rol": "PROFESIONAL",
+    "servicioId": "PSI"
+  },
+  {
+    "username": "ana",
+    "password": "ana123",
+    "nombre": "Ana López",
+    "rol": "USUARIO"
+  },
+  {
+    "username": "luis",
+    "password": "luis123",
+    "nombre": "Luis Torres",
+    "rol": "USUARIO"
+  },
+  {
+    "username": "sofia",
+    "password": "sofia123",
+    "nombre": "Sofía Castillo",
+    "rol": "USUARIO"
+  },
+  {
+    "username": "pedro",
+    "password": "pedro123",
+    "nombre": "Pedro Sánchez",
+    "rol": "USUARIO",
+    "activo": false
+  }
+]
