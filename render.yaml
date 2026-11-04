@@ -1,0 +1,28 @@
+# Blueprint de Render: despliega COP-Backend (Ktor en Docker) y su base PostgreSQL.
+# En Render: New -> Blueprint -> elegir este repositorio (rama main).
+# Solo se compila la carpeta COP-Backend; COP-Frontend no se sube al servidor.
+
+services:
+  - type: web
+    name: cop-backend
+    runtime: docker
+    plan: free
+    dockerfilePath: ./COP-Backend/Dockerfile
+    dockerContext: ./COP-Backend
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      # Clave para firmar los tokens JWT (Render genera un valor aleatorio)
+      - key: JWT_SECRETO
+        generateValue: true
+      # Conexión a la base de datos de abajo (formato postgresql://usuario:clave@host/base)
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cop-db
+          property: connectionString
+
+databases:
+  - name: cop-db
+    databaseName: cop
+    user: cop
+    plan: free

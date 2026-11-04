@@ -1,4 +1,4 @@
-# Dockerfile para desplegar COP-Backend (Ktor Server) en Railway
+# Dockerfile para desplegar COP-Backend (Ktor Server) en Render (o Railway)
 # Va dentro de la carpeta COP-Backend (junto a settings.gradle.kts).
 # No modifica el código del backend: solo indica cómo compilarlo y ejecutarlo.
 
@@ -20,13 +20,26 @@ FROM azul/zulu-openjdk:21-jre
 
 WORKDIR /app
 
-# Copia el servidor ya compilado (los JSON de resources/data van dentro del .jar)
+# Para entrar al servidor por SSH (ssh srv-...@ssh.oregon.render.com):
+# - Render pide que exista ~/.ssh con permisos 0700 (el contenedor corre como root).
+# - curl sirve para probar el backend desde dentro: curl http://localhost:$PORT/
+RUN mkdir -p /root/.ssh \
+    && chmod 0700 /root/.ssh \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copia el servidor ya compilado (los JSON de resources/data van dentro del .jar
+# y se copian a la base de datos la primera vez que arranca)
 COPY --from=build /app/build/install/COP-Backend /app
+
+# Script para revisar el servidor cuando se entra por SSH
+COPY scripts /app/scripts
 
 # Limita la memoria de la JVM para que quepa en el plan gratuito (0.5 GB)
 ENV JAVA_OPTS="-Xmx300m"
 
-# Application.kt escucha en 0.0.0.0:8080
+# Application.kt escucha en 0.0.0.0:8080 o en el puerto de la variable PORT (Render)
 EXPOSE 8080
 
 CMD ["/app/bin/COP-Backend"]
