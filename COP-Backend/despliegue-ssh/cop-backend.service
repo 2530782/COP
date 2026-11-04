@@ -1,0 +1,33 @@
+# Servicio de systemd para COP-Backend.
+# desplegar.ps1 / desplegar.sh lo copian a /etc/systemd/system/cop-backend.service.
+#
+# Comandos útiles en el servidor (entrando por SSH):
+#   sudo systemctl status cop-backend      -> ¿está corriendo?
+#   sudo systemctl restart cop-backend     -> reiniciar
+#   sudo journalctl -u cop-backend -f      -> ver el log en vivo (Ctrl+C para salir)
+
+[Unit]
+Description=COP-Backend (Ktor Server) - Citas Oficiales Poligono
+After=network.target
+
+[Service]
+Type=simple
+User=cop
+Group=cop
+
+# La base de datos H2 se guarda en /var/lib/cop-backend/datos/cop.mv.db
+WorkingDirectory=/var/lib/cop-backend
+
+# PORT, JWT_SECRETO y JAVA_OPTS (los crea preparar-servidor.sh)
+EnvironmentFile=/etc/cop-backend.env
+
+# Script de arranque que genera "gradlew installDist"
+ExecStart=/opt/cop-backend/bin/COP-Backend
+
+# Si el backend se cae, systemd lo vuelve a levantar a los 5 segundos
+Restart=always
+RestartSec=5
+
+[Install]
+# Arranca solo cuando se prende el servidor
+WantedBy=multi-user.target
