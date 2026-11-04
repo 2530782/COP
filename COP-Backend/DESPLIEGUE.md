@@ -68,3 +68,48 @@ y la app funciona en un celular físico con datos móviles.
 - Cada `git push` a `main` vuelve a compilar y desplegar automáticamente.
 - Las contraseñas se guardan cifradas (PBKDF2, `Contrasenas.kt`), aunque los JSON de datos iniciales
   del repositorio tengan las contraseñas de prueba.
+
+## 6. Entrar al servidor de Render por SSH
+
+Render deja entrar por **SSH** al contenedor donde corre el backend. Así se comprueba en vivo
+que el servidor remoto está funcionando: el proceso de Java, las variables y las respuestas de la API.
+Los pasos para crear la llave están en `SSH.md`, en la raíz del repositorio.
+
+**Importante:** Render **no da SSH en el plan Free** de servicios web, solo en los de pago.
+Para la revisión se puede cambiar `cop-backend` a la instancia de pago más barata
+(**Starter, 7 USD al mes, se cobra proporcional al segundo**) y regresarlo a Free al terminar:
+*Settings → Instance Type → Starter → Save*. La base `cop-db` se puede quedar en Free.
+
+1. **Agregar la llave pública a Render:** *Account Settings → SSH Public Keys → + Add SSH Public Key*,
+   y pegar el contenido de `~/.ssh/id_ed25519.pub`. Es la misma llave que se usa en GitHub.
+2. **Copiar el comando:** en el servicio `cop-backend`, pestaña **Connect → SSH**. Se ve así:
+
+   ```bash
+   ssh srv-xxxxxxxxxxxx@ssh.oregon.render.com
+   ```
+
+   `srv-...` es el ID del servicio y `oregon` la región donde se creó (`ohio`, `virginia`, `frankfurt` o `singapore`).
+3. **Conectarse** desde la terminal de la PC. La primera vez se escribe `yes` para aceptar la huella del servidor.
+4. **Ya dentro, revisar el backend** con el script que trae la imagen de Docker:
+
+   ```bash
+   sh /app/scripts/revisar-servidor.sh
+   ```
+
+   Muestra el sistema y la versión de Java, el proceso `COP-Backend`, si hay `DATABASE_URL` y `JWT_SECRETO`
+   (sin enseñar sus valores) y prueba `GET /`, `GET /poligonos` y `POST /login` dentro del servidor.
+5. Otros comandos útiles dentro del servidor:
+
+   ```bash
+   ls /app            # bin/ (script de arranque), lib/ (los .jar) y scripts/
+   ls /app/lib        # librerías: ktor, netty, postgresql, h2, openpdf...
+   echo $PORT         # puerto que Render asignó
+   curl http://localhost:$PORT/poligonos
+   exit               # salir
+   ```
+
+Para que el SSH funcione, el `Dockerfile` crea `/root/.ssh` con permisos `0700` (Render lo pide)
+e instala `curl`. La imagen no trae su propio servidor SSH: lo pone Render.
+Si sale `Permission denied (publickey)`, revisa con `ssh -v srv-...@ssh.oregon.render.com` qué llave se está mandando
+y que sea la misma que se agregó en Render.
+Cada redeploy cierra las sesiones de SSH abiertas.
