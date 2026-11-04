@@ -5,7 +5,8 @@ El proyecto usa **SSH** en dos lugares, con **la misma llave**:
 | Para qué | Con qué servidor | Comando de ejemplo |
 |---|---|---|
 | Subir y bajar el código y las ramas (control de versiones) | GitHub | `git push origin main` (remoto `git@github.com:...`) |
-| Entrar al servidor remoto donde corre el backend | Render | `ssh srv-xxxxxxxxxxxx@ssh.oregon.render.com` |
+| **Desplegar el backend** (subir el programa e instalarlo) | Servidor Linux (Azure) | `scp` y `ssh azureuser@IP` dentro de `desplegar.ps1` |
+| Administrar el servidor (estado, logs, reinicio) | Servidor Linux (Azure) | `ssh azureuser@IP` → `sudo systemctl status cop-backend` |
 
 **Qué es SSH:** un protocolo para conectarse a otra computadora de forma cifrada.
 En lugar de contraseña se usa un **par de llaves**:
@@ -104,31 +105,29 @@ En GitHub: pestaña **Insights → Network**, o el selector de ramas arriba de l
 
 ---
 
-## 3. Render por SSH (servidor remoto del backend)
+## 3. Servidor Linux por SSH (despliegue del backend)
 
-Render **no da SSH en el plan Free** de servicios web, solo en los de pago. Para la revisión,
-cambia `cop-backend` a **Starter** (7 USD al mes, se cobra proporcional al segundo):
-*cop-backend → Settings → Instance Type → Starter*. Al terminar regrésalo a **Free**.
-
-1. Render → tu foto → **Account Settings → SSH Public Keys → + Add SSH Public Key**
-   → pegar la **misma** llave pública de la sección 1.
-2. Servicio `cop-backend` → botón **Connect → SSH** → copiar el comando:
+1. Al crear la máquina virtual en Azure se elige **Clave pública SSH** y se pega la **misma** llave pública
+   de la sección 1 (usuario `azureuser`). Así el servidor nunca usa contraseña.
+2. Entrar:
 
    ```bash
-   ssh srv-xxxxxxxxxxxx@ssh.oregon.render.com
+   ssh azureuser@IP_DEL_SERVIDOR
    ```
 
-3. Ya dentro del servidor:
+3. Preparar el servidor (una vez) y desplegar (cada cambio), desde `COP-Backend`:
 
-   ```bash
-   sh /app/scripts/revisar-servidor.sh   # proceso, variables y prueba de /, /poligonos y /login
-   ls /app                               # bin/, lib/, scripts/
-   echo $PORT                            # puerto asignado por Render
-   curl http://localhost:$PORT/
-   exit
+   ```powershell
+   scp despliegue-ssh/preparar-servidor.sh azureuser@IP_DEL_SERVIDOR:/tmp/
+   ssh azureuser@IP_DEL_SERVIDOR "sed -i 's/\r$//' /tmp/preparar-servidor.sh && sudo bash /tmp/preparar-servidor.sh"
+
+   powershell -ExecutionPolicy Bypass -File despliegue-ssh\desplegar.ps1 azureuser@IP_DEL_SERVIDOR
    ```
 
-Más detalle en `COP-Backend/DESPLIEGUE.md`, sección 6.
+Pasos completos y qué llenar en Azure, en `COP-Backend/DESPLIEGUE.md`.
+
+**Si se usa Render:** Render despliega desde GitHub (no por SSH) y solo deja *entrar* por SSH en planes de pago
+(`ssh srv-...@ssh.oregon.render.com`, ver `COP-Backend/DESPLIEGUE-RENDER.md`, sección 6).
 
 ---
 
@@ -139,7 +138,7 @@ Más detalle en `COP-Backend/DESPLIEGUE.md`, sección 6.
 | `Permission denied (publickey)` | La llave pública no está en GitHub/Render o la PC manda otra. Revisa con `ssh -v ...` y `ssh-add -l`. |
 | `Host key verification failed` | Escribe `yes` cuando pregunte por la huella del servidor. Si cambió, borra la línea con `ssh-keygen -R github.com`. |
 | `ssh: connect to host ... port 22: Connection timed out` | La red de la escuela bloquea el puerto 22. Para GitHub usa el puerto 443 (abajo). |
-| En Render no aparece la opción SSH | El servicio está en el plan Free; cámbialo a Starter. |
+| `Connection timed out` con el servidor de Azure | Revisa la IP pública y que la VM esté encendida; prueba con los datos del celular. |
 
 GitHub por el puerto 443, si la red bloquea el 22. Crear el archivo `~/.ssh/config` con:
 
