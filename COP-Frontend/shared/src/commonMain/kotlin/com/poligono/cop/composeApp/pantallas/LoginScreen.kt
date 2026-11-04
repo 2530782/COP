@@ -231,10 +231,32 @@ fun LoginScreen(
                             }
                         }
 
-                        // ---------- Huella dactilar (solo si el equipo la soporta) ----------
-                        if (acceso.disponible()) {
-                            Spacer(Modifier.height(12.dp))
+                        // ---------- Huella dactilar ----------
+                        // Se vuelve a revisar al tocar "Revisar de nuevo" (por si la persona
+                        // acaba de registrar su huella en los ajustes del teléfono).
+                        var revision by remember { mutableStateOf(0) }
+                        val huellaDisponible = remember(revision) { acceso.disponible() }
 
+                        Spacer(Modifier.height(12.dp))
+
+                        if (!huellaDisponible) {
+                            // El teléfono no tiene huella registrada (o no tiene sensor):
+                            // se explica en lugar de ocultar la opción.
+                            Text(
+                                text = "Entrar con huella: registra una huella en " +
+                                    "Ajustes > Seguridad de tu teléfono para usar esta opción.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            TextButton(
+                                onClick = { revision++ },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Revisar de nuevo")
+                            }
+                        } else {
                             if (acceso.hayCredenciales()) {
                                 OutlinedButton(
                                     onClick = {
