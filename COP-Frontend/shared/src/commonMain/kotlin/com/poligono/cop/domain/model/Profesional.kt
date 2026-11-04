@@ -4,5 +4,6 @@ package com.poligono.cop.domain.model
 data class Profesional(
     val username: String,
     val nombre: String,
-    val servicioId: String?
+    val servicioId: String?,
+    val activo: Boolean = true
 )

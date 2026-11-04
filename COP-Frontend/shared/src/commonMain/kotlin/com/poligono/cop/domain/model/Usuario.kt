@@ -9,5 +9,7 @@ data class Usuario(
     val nombre: String,
     val rol: Rol,
     /** Solo los profesionales tienen un servicio (ej. "FIS" = Fisioterapia). */
-    val servicioId: String? = null
+    val servicioId: String? = null,
+    val telefono: String = "",
+    val correo: String = ""
 )

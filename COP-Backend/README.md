@@ -1,6 +1,6 @@
 # COP-Backend (Ktor Server)
 
-Servidor de la app **COP – Citas Oficiales Polígono**. Está hecho con **Ktor** (framework de JetBrains, ligero y basado en corrutinas) y lee las credenciales predefinidas y los datos desde **archivos JSON**. Por ahora es una arquitectura **local**: no hay base de datos.
+Servidor de la app **COP – Citas Oficiales Polígono**. Está hecho con **Ktor** (framework de JetBrains, ligero y basado en corrutinas) y guarda los datos en una **base de datos**: **H2** (un archivo en tu PC, no hay que instalar nada) o **PostgreSQL** en Render/Railway. Los archivos JSON de `resources/data` se usan como **datos iniciales**: la primera vez que arranca, el servidor los copia a la base con las contraseñas **cifradas**.
 
 ---
 
@@ -13,7 +13,53 @@ Servidor de la app **COP – Citas Oficiales Polígono**. Está hecho con **Ktor
 4. En la consola debe aparecer: `Responding at http://0.0.0.0:8080`
 5. Prueba en el navegador: <http://localhost:8080/> → `Servidor COP funcionando`
 
-Para correr las pruebas: `./gradlew test`
+Para correr las pruebas: `./gradlew test` (cada prueba usa su propia base en memoria).
+
+### 1.1 Qué cambió en esta versión (noviembre 2026)
+
+| Antes | Ahora |
+|---|---|
+| Datos solo en `usuarios.json`, `servicios.json`, `citas.json` | Base de datos H2 / PostgreSQL; los JSON son los datos iniciales |
+| Contraseñas en texto plano | Cifradas con PBKDF2 (`seguridad/Contrasenas.kt`, COP-RC-03) |
+| `/citas?paciente=ana` sin control | Token JWT por rol: cada quien ve solo lo suyo (`Seguridad.kt`, COP-RC-04) |
+| Bloqueo en memoria (se perdía al reiniciar) | Bloqueo guardado en la base |
+| Solo consultas | Agendar, cancelar, reprogramar, confirmar, rechazar, atendida/inasistencia, cita manual, horarios, avisos, polígonos (GPS), exportar PDF/CSV, reportes |
+
+`POST /login` responde igual que antes (`exito`, `mensaje`, `usuario`) y ahora agrega `token`.
+Las cuentas de prueba siguen siendo las mismas.
+
+**Base de datos local:** queda en `COP-Backend/datos/cop.mv.db`. Si borras la carpeta `datos`, al reiniciar se vuelven a cargar los JSON.
+
+**Variables de entorno** (Render o Railway → Environment / Variables):
+
+| Variable | Para qué | Valor por defecto |
+|---|---|---|
+| `DATABASE_URL` | URL de la base PostgreSQL | H2 local |
+| `JWT_SECRETO` | Clave para firmar los tokens (poner una larga y propia) | clave de desarrollo |
+| `PORT` | Puerto (la plataforma lo pone sola) | 8080 |
+| `MODO_DEMO` | `true` = el código de recuperación aparece en la app (no hay correo todavía) | `true` |
+| `PLAZO_HORAS_CAMBIO` | Horas mínimas para cancelar o reprogramar (COP-RNN-04) | 24 |
+| `MINUTOS_INACTIVIDAD` | Cierre de sesión sin uso (COP-RNN-08) | 10 |
+| `SEGUNDOS_BLOQUEO` | Bloqueo tras 3 intentos (COP-RNN-02) | 60 |
+
+**Rutas nuevas** (las de siempre siguen igual):
+
+| Ruta | Quién | Para qué |
+|---|---|---|
+| `POST /registro`, `POST /recuperar`, `POST /restablecer` | Cualquiera | Cuenta y contraseña |
+| `GET /configuracion`, `GET /poligonos` | Cualquiera | Plazos, contacto y polígonos para el mapa |
+| `GET /citas` | Con token | Citas según el rol |
+| `POST /citas` | USUARIO | Solicitar cita (queda PENDIENTE) |
+| `PUT /citas/{id}/cancelar`, `PUT /citas/{id}/reprogramar` | USUARIO (y personal para reprogramar) | Dentro del plazo |
+| `PUT /citas/{id}/estado` | PERSONAL, ADMINISTRADOR, PROFESIONAL | Confirmar, rechazar, cancelar, atendida, inasistencia |
+| `POST /citas/manual` | PERSONAL, ADMINISTRADOR | Cita presencial o telefónica |
+| `GET /disponibilidad`, `GET /disponibilidad/fechas` | Con token | Horas y días libres de un profesional |
+| `GET /notificaciones`, `PUT /notificaciones/...` | Con token | Avisos del Centro |
+| `POST/PUT /servicios`, `/profesionales`, `/poligonos`, `POST /horarios`, `DELETE /horarios/{id}` | PERSONAL, ADMINISTRADOR | Administración |
+| `GET /exportar/agenda.pdf`, `/exportar/agenda.csv` | PERSONAL, ADMINISTRADOR (token en `?token=`) | Exportar agenda |
+| `POST /reportes`, `GET /reportes` | Con token / personal | Reportes de fallas |
+
+Archivos nuevos: `Configuracion.kt`, `Seguridad.kt`, `data/BaseDatos.kt`, `data/Esquema.kt`, `data/*Repositorio.kt`, `services/ReglasCitas.kt`, `services/Validaciones.kt`, `services/Fechas.kt`, `seguridad/`, `rutas/`.
 
 ---
 
@@ -123,7 +169,8 @@ Hay dos versiones del usuario a propósito:
 
 Con las citas pasa algo parecido: `CitaRegistro` guarda solo ids (`"FIS"`, `"ana"`) y `CitaDto` ya trae los nombres (`"Fisioterapia"`, `"Ana López"`).
 
-### `data/JsonDataSource.kt`
+### `data/JsonDataSource.kt` (datos iniciales)
+Ahora solo se usa una vez: `Esquema.cargarDatosIniciales()` lo llama cuando la base está vacía y copia los usuarios (con contraseña cifrada), servicios y citas a las tablas.
 ```kotlin
 val usuarios: List<UsuarioRegistro> = leer("data/usuarios.json")
 ```
@@ -132,8 +179,8 @@ val usuarios: List<UsuarioRegistro> = leer("data/usuarios.json")
 - `inline fun <reified T>`: `reified` permite saber el tipo `T` mientras el programa corre, así una sola función sirve para usuarios, servicios y citas.
 
 ### `services/AuthService.kt`
-- Busca un usuario con ese `username` y `password` en la lista leída del JSON.
-- Lleva la cuenta de fallos por usuario en un `HashMap`. Al tercer fallo seguido bloquea **1 minuto** (requisito COP-RNN-02).
+- Busca al usuario (por `username` o correo) en la tabla `usuarios` y compara la contraseña cifrada.
+- Guarda los fallos en la base. Al tercer fallo seguido bloquea **1 minuto** (requisito COP-RNN-02).
 - `sealed interface ResultadoLogin`: los 4 resultados posibles (`Exito`, `Incorrecto`, `Bloqueado`, `Desactivado`). Como es `sealed`, el `when` de `Routing.kt` está obligado a manejar los 4.
 - `@Synchronized`: si llegan dos peticiones al mismo tiempo, se atienden una por una para que el contador no se desordene.
 
@@ -149,7 +196,7 @@ val usuarios: List<UsuarioRegistro> = leer("data/usuarios.json")
 | `ana` / `luis` / `sofia` | `ana123` / `luis123` / `sofia123` | USUARIO | Sus citas y los servicios |
 | `pedro` | `pedro123` | USUARIO (desactivado) | No entra: muestra “cuenta desactivada” |
 
-Para agregar un usuario solo editas `usuarios.json` y reinicias el servidor; no se toca código (COP-RE-01).
+Los usuarios nuevos se crean desde la app (registro, o el administrador para profesionales); no se toca código (COP-RE-01). Si editas `usuarios.json`, borra la carpeta `datos/` para que se vuelva a cargar.
 
 ---
 
@@ -170,9 +217,17 @@ Respuesta:
         "username": "ana",
         "nombre": "Ana López",
         "rol": "USUARIO",
-        "servicioId": null
-    }
+        "servicioId": null,
+        "telefono": "",
+        "correo": ""
+    },
+    "token": "eyJhbGciOiJIUzI1NiIs..."
 }
+```
+Las demás rutas llevan el token en el encabezado:
+```
+GET http://localhost:8080/citas
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 ```
 
 ---

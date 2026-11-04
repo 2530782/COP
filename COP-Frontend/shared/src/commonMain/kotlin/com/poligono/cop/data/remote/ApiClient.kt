@@ -27,14 +27,17 @@ object ApiClient {
                 Json {
                     ignoreUnknownKeys = true   // si el backend agrega campos nuevos, no truena
                     isLenient = true
+                    encodeDefaults = true      // manda todos los campos al backend
                 }
             )
         }
 
-        // Si el servidor no contesta, no nos quedamos esperando para siempre
+        // Si el servidor no contesta, no nos quedamos esperando para siempre.
+        // 60 s porque Render (plan gratuito) tarda hasta un minuto en "despertar".
         install(HttpTimeout) {
-            connectTimeoutMillis = 5_000
-            requestTimeoutMillis = 10_000
+            connectTimeoutMillis = 60_000
+            requestTimeoutMillis = 60_000
+            socketTimeoutMillis = 60_000
         }
     }
 }

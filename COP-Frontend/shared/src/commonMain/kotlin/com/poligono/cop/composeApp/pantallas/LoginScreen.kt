@@ -47,6 +47,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.poligono.cop.composeApp.componentes.Aviso
 import com.poligono.cop.domain.biometria.AccesoBiometrico
 import com.poligono.cop.domain.model.Usuario
 import com.poligono.cop.ui.LoginViewModel
@@ -68,6 +69,11 @@ private val cuentasDePrueba = listOf(
 fun LoginScreen(
     acceso: AccesoBiometrico,
     onLoginExitoso: (Usuario) -> Unit,
+    mensajeInicial: String? = null,
+    onRegistrarse: () -> Unit = {},
+    onRecuperar: () -> Unit = {},
+    onVerPoligonos: () -> Unit = {},
+    onAyuda: () -> Unit = {},
     viewModel: LoginViewModel = viewModel { LoginViewModel() }
 ) {
     // collectAsState: cada vez que el StateFlow cambia, la pantalla se vuelve a dibujar
@@ -132,6 +138,12 @@ fun LoginScreen(
                 )
 
                 Spacer(Modifier.height(28.dp))
+
+                // Ej. "Tu sesión se cerró por inactividad" (COP-RNN-08)
+                if (mensajeInicial != null) {
+                    Aviso(mensajeInicial)
+                    Spacer(Modifier.height(12.dp))
+                }
 
                 // ---------- Formulario ----------
                 Card(
@@ -219,10 +231,32 @@ fun LoginScreen(
                             }
                         }
 
-                        // ---------- Huella dactilar (solo si el equipo la soporta) ----------
-                        if (acceso.disponible()) {
-                            Spacer(Modifier.height(12.dp))
+                        // ---------- Huella dactilar ----------
+                        // Se vuelve a revisar al tocar "Revisar de nuevo" (por si la persona
+                        // acaba de registrar su huella en los ajustes del teléfono).
+                        var revision by remember { mutableStateOf(0) }
+                        val huellaDisponible = remember(revision) { acceso.disponible() }
 
+                        Spacer(Modifier.height(12.dp))
+
+                        if (!huellaDisponible) {
+                            // El teléfono no tiene huella registrada (o no tiene sensor):
+                            // se explica en lugar de ocultar la opción.
+                            Text(
+                                text = "Entrar con huella: registra una huella en " +
+                                    "Ajustes > Seguridad de tu teléfono para usar esta opción.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            TextButton(
+                                onClick = { revision++ },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Revisar de nuevo")
+                            }
+                        } else {
                             if (acceso.hayCredenciales()) {
                                 OutlinedButton(
                                     onClick = {
@@ -253,6 +287,28 @@ fun LoginScreen(
                             }
                         }
                     }
+                }
+
+                // ---------- Cuenta nueva, recuperar contraseña, mapa y ayuda ----------
+                Spacer(Modifier.height(16.dp))
+                OutlinedButton(
+                    onClick = onRegistrarse,
+                    enabled = !estado.cargando,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Crear una cuenta")
+                }
+                TextButton(onClick = onRecuperar) {
+                    Text("¿Olvidaste tu contraseña?")
+                }
+                OutlinedButton(
+                    onClick = onVerPoligonos,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("📍 Ver polígonos cercanos (GPS)")
+                }
+                TextButton(onClick = onAyuda) {
+                    Text("Ayuda y contacto")
                 }
 
                 Spacer(Modifier.height(24.dp))
