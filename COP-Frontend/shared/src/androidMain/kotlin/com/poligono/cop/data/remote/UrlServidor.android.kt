@@ -21,8 +21,7 @@ package com.poligono.cop.data.remote
 const val USAR_SERVIDOR_REMOTO = true
 
 // CAMBIAR por la IP pública de tu servidor
-const val URL_SERVIDOR_REMOTO = "http://IP_DEL_SERVIDOR:8080"
-
+const val URL_SERVIDOR_REMOTO = "http://18.217.237.221:8080"
 const val URL_LOCAL = "http://127.0.0.1:8080"
 
 actual fun urlServidor(): String {
