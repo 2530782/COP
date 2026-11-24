@@ -1,4 +1,6 @@
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl   // ← NUEVO
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -19,6 +21,22 @@ kotlin {
             baseName = "Shared"
             isStatic = true
         }
+    }
+
+    // Destino Web (Kotlin/Wasm)                                  // ← NUEVO
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmJs {
+        // Nombre de los archivos generados: webApp.js y webApp.wasm
+        outputModuleName.set("webApp")
+
+        browser {
+            commonWebpackConfig {
+                outputFileName = "webApp.js"
+            }
+        }
+
+        // Genera una app ejecutable en el navegador (no solo librería)
+        binaries.executable()
     }
 
     // Destino Android
@@ -62,6 +80,11 @@ kotlin {
         iosMain.dependencies {
             // Motor HTTP de Ktor para iOS
             implementation(libs.ktor.client.darwin)
+        }
+        // Código que solo se compila para la Web                 // ← NUEVO
+        wasmJsMain.dependencies {
+            // Motor HTTP de Ktor para el navegador
+            implementation(libs.ktor.client.js)
         }
         // Código compartido por TODAS las plataformas
         commonMain.dependencies {

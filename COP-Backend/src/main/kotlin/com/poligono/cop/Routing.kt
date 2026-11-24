@@ -7,8 +7,10 @@ import com.poligono.cop.rutas.rutasCitas
 import com.poligono.cop.rutas.rutasExportar
 import com.poligono.cop.rutas.rutasPublicas
 import com.poligono.cop.services.AuthService
+import io.ktor.http.ContentType
 import io.ktor.server.application.Application
 import io.ktor.server.auth.authenticate
+import io.ktor.server.http.content.staticResources
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
@@ -16,8 +18,11 @@ import io.ktor.server.routing.routing
 /**
  * RUTAS (endpoints) del backend COP. Cada grupo está en su archivo de la carpeta rutas/.
  *
+ * Página web (Kotlin/Wasm, archivos en resources/web):
+ *   GET  /                      abre la aplicación web de COP
+ *
  * Sin sesión:
- *   GET  /                      prueba rápida de que el servidor está vivo
+ *   GET  /status                prueba rápida de que el servidor está vivo
  *   POST /login                 inicia sesión (regresa usuario y token)
  *   POST /registro              crea una cuenta de usuario
  *   POST /recuperar, /restablecer   recuperar contraseña
@@ -38,7 +43,8 @@ import io.ktor.server.routing.routing
 fun Application.configureRouting(auth: AuthService) {
     routing {
 
-        get("/") {
+        // Antes estaba en "/", ahora "/" muestra la página web
+        get("/status") {
             call.respondText("Servidor COP funcionando")
         }
 
@@ -54,6 +60,21 @@ fun Application.configureRouting(auth: AuthService) {
         authenticate(SESION) {
             rutasCitas()
             rutasCatalogoAdmin()
+        }
+
+        // Página web de COP (Kotlin/Wasm) copiada en src/main/resources/web
+        // Va FUERA de authenticate para que se pueda abrir sin iniciar sesión
+        staticResources("/", "web") {
+            // Tipos MIME: el navegador solo ejecuta el .wasm si llega como application/wasm
+            contentType { recurso ->
+                when (recurso.path.substringAfterLast('.').lowercase()) {
+                    "wasm" -> ContentType("application", "wasm")
+                    "js" -> ContentType.Application.JavaScript
+                    "html" -> ContentType.Text.Html
+                    "css" -> ContentType.Text.CSS
+                    else -> null
+                }
+            }
         }
     }
 }

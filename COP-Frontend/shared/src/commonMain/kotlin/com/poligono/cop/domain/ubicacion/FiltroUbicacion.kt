@@ -62,6 +62,7 @@ object Distancias {
 
     /** Distancia en metros entre dos puntos (fórmula de Haversine). */
     fun metros(
+
         lat1: Double,
         lon1: Double,
         lat2: Double,

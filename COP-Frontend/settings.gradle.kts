@@ -32,3 +32,4 @@ dependencyResolutionManagement {
 //  - shared:     TODO el código compartido (pantallas, ViewModels, red con Ktor Client)
 include(":androidApp")
 include(":shared")
+include(":webApp")
