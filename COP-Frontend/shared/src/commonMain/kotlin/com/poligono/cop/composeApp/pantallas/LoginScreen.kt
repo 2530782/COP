@@ -156,7 +156,7 @@ fun LoginScreen(
                 // ---------- Etiqueta de plataforma (prueba de despliegue) ----------
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    text = "Versión 1.1 · Ejecutando en: ${nombreDispositivo()}",
+                    text = "Versión 1.2 · Ejecutando en: ${nombreDispositivo()}",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier
