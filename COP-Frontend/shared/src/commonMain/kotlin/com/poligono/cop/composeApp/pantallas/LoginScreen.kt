@@ -51,6 +51,7 @@ import com.poligono.cop.composeApp.componentes.Aviso
 import com.poligono.cop.domain.biometria.AccesoBiometrico
 import com.poligono.cop.domain.model.Usuario
 import com.poligono.cop.ui.LoginViewModel
+import com.poligono.cop.plataforma.nombreDispositivo
 
 /** Cuentas de prueba que existen en usuarios.json del backend (para la demostración). */
 private val cuentasDePrueba = listOf(
@@ -130,6 +131,13 @@ fun LoginScreen(
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
+
+                Text(
+                    text = "Centro de Desarrollo Comunitario Polígono Guadalupe",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
                 Text(
                     text = "Centro de Desarrollo Comunitario Polígono Guadalupe",
                     style = MaterialTheme.typography.bodyMedium,
@@ -144,6 +152,18 @@ fun LoginScreen(
                     Aviso(mensajeInicial)
                     Spacer(Modifier.height(12.dp))
                 }
+
+                // ---------- Etiqueta de plataforma (prueba de despliegue) ----------
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = "Versión 1.1 · Ejecutando en: ${nombreDispositivo()}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier
+                        .clip(MaterialTheme.shapes.small)
+                        .background(MaterialTheme.colorScheme.primaryContainer)
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                )
 
                 // ---------- Formulario ----------
                 Card(
@@ -347,3 +367,4 @@ fun LoginScreen(
         }
     }
 }
+
