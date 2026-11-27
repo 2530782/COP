@@ -33,11 +33,12 @@ object ApiClient {
         }
 
         // Si el servidor no contesta, no nos quedamos esperando para siempre.
-        // 60 s porque Render (plan gratuito) tarda hasta un minuto en "despertar".
+        // 120 s porque Render (plan gratuito) tarda un minuto o más en "despertar"
+        // (se midieron 55 s); con 60 s la primera petición podía fallar como "sin conexión".
         install(HttpTimeout) {
-            connectTimeoutMillis = 60_000
-            requestTimeoutMillis = 60_000
-            socketTimeoutMillis = 60_000
+            connectTimeoutMillis = 120_000
+            requestTimeoutMillis = 120_000
+            socketTimeoutMillis = 120_000
         }
     }
 }
